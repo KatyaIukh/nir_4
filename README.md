@@ -26,3 +26,105 @@
 
 ```bash
 pip install torch transformers datasets ir_measures tqdm clearml
+
+## Использование
+
+### Подготовка конфигурации
+
+Создайте JSON-конфиг для обучения:
+
+{
+  "data_config": {
+    "en": ["/path/to/en/data"],
+    "ru": ["/path/to/ru/data.json"]
+  },
+  "output_dir": "./output",
+  "model_config_path": "./moe_config.json",
+  "batch_size": 8,
+  "grad_acc_steps": 4,
+  "learning_rate": 2e-5,
+  "max_epochs": 3,
+  "save_steps": 5000,
+  "eval_steps": 1000,
+  "max_length": 512,
+  "seed": 42
+}
+
+Создайте JSON-конфиг модели:
+
+{
+  "num_hidden_layers": 24,
+  "hidden_size": 1024,
+  "intermediate_size": 4096,
+  "num_attention_heads": 16,
+  "moe_num_experts": 8
+}
+
+### Запуск обучения
+
+python train_moe.py --config config.json --model_config moe_config.json
+
+Дополнительные опции:
+
+python train_moe.py --config config.json --model_config moe_config.json --batch_size 4 --learning_rate 1e-5 --max_epochs 5 --output_dir ./my_experiment --log_to_clearml --project_name "Semantic Search" --experiment_name "moe_experiment_1"
+
+### Запуск оценки
+
+Оценка базовой модели:
+
+python evaluate.py --config config.yaml --model_type base
+
+Оценка инициализированной MoE:
+
+python evaluate.py --config config.yaml --model_type moe_init
+
+Оценка обученной MoE из чекпоинта:
+
+python evaluate.py --config config.yaml --model_type moe_saved --checkpoint ./output/best
+
+## Формат данных
+
+### JSON формат
+
+Файл должен содержать список объектов:
+
+[
+  {
+    "query": "текст запроса",
+    "pos": "релевантный документ",
+    "neg": "нерелевантный документ"
+  },
+  {
+    "query": "другой запрос",
+    "pos": "релевантный документ",
+    "neg": "нерелевантный документ"
+  }
+]
+
+Поле neg является опциональным.
+
+### HuggingFace datasets
+
+Структура папок:
+
+/path/to/data/
+├── corpus/
+│   ├── dataset.arrow
+│   └── dataset_info.json
+└── dataset/
+    ├── dataset.arrow
+    └── dataset_info.json
+
+Корпус должен содержать поля id и text. Датасет должен содержать поля query, positives (словарь с ключом doc_id и списком идентификаторов), опционально negatives (словарь с ключом doc_id и списком идентификаторов).
+
+## Метрики
+
+Оценка производится по следующим метрикам: nDCG@10, MRR@10, P@10 (Precision at 10), R@10 (Recall at 10).
+
+## Требования
+
+Python 3.8 или выше, PyTorch, transformers, datasets, ir_measures, tqdm, clearml (опционально).
+
+## Лицензия
+
+MIT
